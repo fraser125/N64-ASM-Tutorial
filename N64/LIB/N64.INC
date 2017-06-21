@@ -289,6 +289,15 @@ macro force_pc(size) {
 	}
 }
 
+macro fixed_gap(base, gap) {
+	if (pc() > {base} + {gap}) {
+		error "Gap is greater than specified size."
+	}
+	while (pc() < {base} + {gap}) {
+		db 0xAB
+	}	
+}
+
 macro align(size) { // Align Byte Amount
   while (pc() % {size}) {
     db 0
@@ -301,14 +310,6 @@ macro N64_INIT() { // Initialise N64 (Stop N64 From Crashing 5 Seconds After Boo
   sw t0,PIF_RAM+$3C(a0)
   // Stack is configured by Cartridge BootCode
   //addiu sp, r0, $FFF // 4K of Stack Space
-  // V4300i Interrupt_Init
-  mfc0 t0, Status
-  ori t0, 0x401
-  mtc0 t0, Status
-  // RCP Interrupt_Init
-  la a0, (MI_BASE << 16) | MI_INTR_MASK
-  li a1, mi_mask_clear_all
-  sw a1, 0(a0)
 }
 
 macro STACK_PUSH(register) {
