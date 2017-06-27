@@ -13,5 +13,3 @@ Inside each file the following code patterns apply
 
 * The underscore _ prefixes labels and macros that are for internal use only.
 
-
-Many features are wrapped into Macros that are intended to assist in reading the code.

@@ -294,8 +294,21 @@ macro fixed_gap(base, gap) {
 		error "Gap is greater than specified size."
 	}
 	while (pc() < {base} + {gap}) {
-		db 0xAB
+		if {defined DEBUG_SHOW_STATIC_VALUE} {
+			db 0xAB
+		} else {
+			db 0x0
+		}
 	}	
+}
+
+// 	static_value(DEBUG_SHOW_STATIC_VALUE, dw 0x0, db "TEST")
+macro static_value(conditional, default, alternative) {
+	if {defined {conditional}} {
+		{alternative}
+	} else {
+		{default}
+	}
 }
 
 macro align(size) { // Align Byte Amount

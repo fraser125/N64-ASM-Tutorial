@@ -34,19 +34,88 @@ _interrupt_init_loop:
 align(8)
 _interrupt_save_registers:
 	mfc0 k0, Cause
-interrupt_save_registers()
+	la k1, interrupt_saved_registers
+	// Save Registers
+	sw at, at*4(k1)
+	sw v0, v0*4(k1)
+	sw v1, v1*4(k1)
+	
+	sw a0, a0*4(k1)
+	sw a1, a1*4(k1)
+	sw a2, a2*4(k1)
+	sw a3, a3*4(k1)
+	
+	sw t0, t0*4(k1)
+	sw t1, t1*4(k1)
+	sw t2, t2*4(k1)
+	sw t3, t3*4(k1)
+	sw t4, t4*4(k1)
+	sw t5, t5*4(k1)
+	sw t6, t6*4(k1)
+	sw t7, t7*4(k1)
+	sw t8, t8*4(k1)
+	sw t9, t9*4(k1)
+
+	sw s0, s0*4(k1)
+	sw s1, s1*4(k1)
+	sw s2, s2*4(k1)
+	sw s3, s3*4(k1)
+	sw s4, s4*4(k1)
+	sw s5, s5*4(k1)
+	sw s6, s6*4(k1)
+	sw s7, s7*4(k1)
+	sw s8, s8*4(k1)
+
+	sw gp, gp*4(k1)
+	sw sp, sp*4(k1)
+	// 'ra' saved in the Handler code itself.
+	//sw ra, ra*4(k1)
+
+	// sw k0, *4(k1) Already wiped and re-used
+	// sw k1, *4(k1) Already wiped and re-used
+	
+	mfhi t0	
+	sw t0, 128(k1)
+	mflo t1
+	sw t1, 132(k1)	
+	// Save off the Floating Point Registers
 	jr ra
 	nop
 	nop	
+
+interrupt_set_debug:
+	// Set all empty Jump Table Entries to the debug handler.	
+	li t0, 52
+	la t1,InterruptHandlers
+	add t3, t1, t0
+_interrupt_set_debug_int_loop:
+	lw t2, 0(t1)
+	nop
+	nop
+	beql t2, r0, _interrupt_set_debug_int_next
+	add t2, r0, a0
+	sw t2, 0(t1)
+_interrupt_set_debug_int_next:
+	bnel t1, t3, _interrupt_set_debug_int_loop
+	add t1, t1, 4
 	
-sys_interrupt_activate:
+_interrupt_set_debug_exceptions:
+	li t0, 64
+	la t1,ExceptionHandlers
+	add t3, t1, t0
+
+	
+	jr ra
+	nop	
+	
+interrupt_activate:
 	mfc0 t0, Status
 	ori t0, 1
 	mtc0 t0, Status
 	jr ra
 	nop
 	
-sys_interrupt_deactivate:
+interrupt_deactivate:
 	mfc0 t0, Status
 	la t1, ~1
 	and t0, t1
@@ -54,7 +123,7 @@ sys_interrupt_deactivate:
 	jr ra
 	nop
 	
-sys_interrupt_sp_enable:
+interrupt_sp_enable:
 	la a0, (MI_BASE << 16) | MI_INTR_MASK
 	lw a1, 0(a0)
 	nop
@@ -62,7 +131,7 @@ sys_interrupt_sp_enable:
 	sw a1, 0(a0)
 	jr ra
 	nop
-sys_interrupt_sp_reset:
+interrupt_sp_reset:
 	la a0, (SP_BASE << 16) | SP_STATUS
 	lw a1, 0(a0)
 	nop
@@ -70,7 +139,7 @@ sys_interrupt_sp_reset:
 	sw a1, 0(a0)
 	jr ra
 	nop
-sys_interrupt_sp_disable:
+interrupt_sp_disable:
 	la a0, (MI_BASE << 16) | MI_INTR_MASK
 	lw a1, 0(a0)
 	nop
@@ -79,7 +148,7 @@ sys_interrupt_sp_disable:
 	jr ra
 	nop
 
-sys_interrupt_si_enable:
+interrupt_si_enable:
 	la a0, (MI_BASE << 16) | MI_INTR_MASK
 	lw a1, 0(a0)
 	nop
@@ -87,7 +156,7 @@ sys_interrupt_si_enable:
 	sw a1, 0(a0)
 	jr ra
 	nop
-sys_interrupt_si_reset:
+interrupt_si_reset:
 	la a0, (SI_BASE << 16) | SI_STATUS
 	lw a1, 0(a0)
 	nop
@@ -95,7 +164,7 @@ sys_interrupt_si_reset:
 	sw a1, 0(a0)
 	jr ra
 	nop
-sys_interrupt_si_disable:
+interrupt_si_disable:
 	la a0, (MI_BASE << 16) | MI_INTR_MASK
 	lw a1, 0(a0)
 	nop
@@ -104,7 +173,7 @@ sys_interrupt_si_disable:
 	jr ra
 	nop
 	
-sys_interrupt_ai_enable:
+interrupt_ai_enable:
 	la a0, (MI_BASE << 16) | MI_INTR_MASK
 	lw a1, 0(a0)
 	nop
@@ -112,7 +181,7 @@ sys_interrupt_ai_enable:
 	sw a1, 0(a0)
 	jr ra
 	nop
-sys_interrupt_ai_reset:
+interrupt_ai_reset:
 	la a0, (AI_BASE << 16) | AI_STATUS
 	lw a1, 0(a0)
 	nop
@@ -120,7 +189,7 @@ sys_interrupt_ai_reset:
 	sw a1, 0(a0)
 	jr ra
 	nop
-sys_interrupt_ai_disable:
+interrupt_ai_disable:
 	la a0, (MI_BASE << 16) | MI_INTR_MASK
 	lw a1, 0(a0)
 	nop
@@ -129,11 +198,11 @@ sys_interrupt_ai_disable:
 	jr ra
 	nop
 
-sys_interrupt_vi_enable:
-	beq a0, r0, _sys_interrupt_vi_enable2 // Trashes t0 if true
+interrupt_vi_enable:
+	beq a0, r0, _interrupt_vi_enable2 // Trashes t0 if true
 	la t0, (VI_BASE << 16) | VI_V_INTR
 	sw a0, 0(t0)
-_sys_interrupt_vi_enable2:
+_interrupt_vi_enable2:
 	la a0, (MI_BASE << 16) | MI_INTR_MASK
 	lw a1, 0(a0)
 	nop
@@ -141,7 +210,7 @@ _sys_interrupt_vi_enable2:
 	sw a1, 0(a0)
 	jr ra
 	nop
-sys_interrupt_vi_reset:
+interrupt_vi_reset:
 	la a0, (VI_BASE << 16) | VI_V_CURRENT_LINE
 	lw a1, 0(a0)
 	nop
@@ -149,7 +218,7 @@ sys_interrupt_vi_reset:
 	sw a1, 0(a0) // Write same value back to reset Interrupt
 	jr ra
 	nop
-sys_interrupt_vi_disable:
+interrupt_vi_disable:
 	la a0, (MI_BASE << 16) | MI_INTR_MASK
 	lw a1, 0(a0)
 	nop
@@ -158,7 +227,7 @@ sys_interrupt_vi_disable:
 	jr ra
 	nop
 
-sys_interrupt_pi_enable:
+interrupt_pi_enable:
 	la a0, (MI_BASE << 16) | MI_INTR_MASK
 	lw a1, 0(a0)
 	nop
@@ -166,7 +235,7 @@ sys_interrupt_pi_enable:
 	sw a1, 0(a0)
 	jr ra
 	nop
-sys_interrupt_pi_reset:
+interrupt_pi_reset:
 	la a0, (PI_BASE << 16) | PI_STATUS
 	lw a1, 0(a0)
 	nop
@@ -174,7 +243,7 @@ sys_interrupt_pi_reset:
 	sw a1, 0(a0)
 	jr ra
 	nop
-sys_interrupt_pi_disable:
+interrupt_pi_disable:
 	la a0, (MI_BASE << 16) | MI_INTR_MASK
 	lw a1, 0(a0)
 	nop
@@ -183,7 +252,7 @@ sys_interrupt_pi_disable:
 	jr ra
 	nop
 
-sys_interrupt_dp_enable:
+interrupt_dp_enable:
 	la a0, (MI_BASE << 16) | MI_INTR_MASK
 	lw a1, 0(a0)
 	nop
@@ -191,7 +260,7 @@ sys_interrupt_dp_enable:
 	sw a1, 0(a0)
 	jr ra
 	nop
-sys_interrupt_dp_reset:
+interrupt_dp_reset:
 	la a0, (MI_BASE << 16) | MI_INIT_MODE
 	lw a1, 0(a0)
 	nop
@@ -199,7 +268,7 @@ sys_interrupt_dp_reset:
 	sw a1, 0(a0)
 	jr ra
 	nop
-sys_interrupt_dp_disable:
+interrupt_dp_disable:
 	la a0, (MI_BASE << 16) | MI_INTR_MASK
 	lw a1, 0(a0)
 	nop
