@@ -1,7 +1,7 @@
 constant exception_destination($80000000)
 align(8)
 _interrupt_init:
-	la t0, _interrupt_handler_template
+	la t0, _inthandler_overlay
 	li t1, exception_destination
 	addi t2, r0, 512
 _interrupt_init_loop:
@@ -32,57 +32,6 @@ _interrupt_init_loop:
 	nop
 	
 align(8)
-_interrupt_save_registers:
-	mfc0 k0, Cause
-	la k1, interrupt_saved_registers
-	// Save Registers
-	sw at, at*4(k1)
-	sw v0, v0*4(k1)
-	sw v1, v1*4(k1)
-	
-	sw a0, a0*4(k1)
-	sw a1, a1*4(k1)
-	sw a2, a2*4(k1)
-	sw a3, a3*4(k1)
-	
-	sw t0, t0*4(k1)
-	sw t1, t1*4(k1)
-	sw t2, t2*4(k1)
-	sw t3, t3*4(k1)
-	sw t4, t4*4(k1)
-	sw t5, t5*4(k1)
-	sw t6, t6*4(k1)
-	sw t7, t7*4(k1)
-	sw t8, t8*4(k1)
-	sw t9, t9*4(k1)
-
-	sw s0, s0*4(k1)
-	sw s1, s1*4(k1)
-	sw s2, s2*4(k1)
-	sw s3, s3*4(k1)
-	sw s4, s4*4(k1)
-	sw s5, s5*4(k1)
-	sw s6, s6*4(k1)
-	sw s7, s7*4(k1)
-	sw s8, s8*4(k1)
-
-	sw gp, gp*4(k1)
-	sw sp, sp*4(k1)
-	// 'ra' saved in the Handler code itself.
-	//sw ra, ra*4(k1)
-
-	// sw k0, *4(k1) Already wiped and re-used
-	// sw k1, *4(k1) Already wiped and re-used
-	
-	mfhi t0	
-	sw t0, 128(k1)
-	mflo t1
-	sw t1, 132(k1)	
-	// Save off the Floating Point Registers
-	jr ra
-	nop
-	nop	
-
 interrupt_set_debug:
 	// Set all empty Jump Table Entries to the debug handler.	
 	li t0, 52
@@ -120,6 +69,10 @@ interrupt_deactivate:
 	la t1, ~1
 	and t0, t1
 	mtc0 t0, Status
+	jr ra
+	nop
+
+interrupt_timer_reset:
 	jr ra
 	nop
 	
@@ -277,15 +230,17 @@ interrupt_dp_disable:
 	jr ra
 	nop
 align(8)
-interrupt_saved_registers:
+interrupt_saved_registers_std:
 // Standard 32 Registers r0 - ra
 dw $0, $0, $0, $0, $0, $0, $0, $0
 dw $0, $0, $0, $0, $0, $0, $0, $0
 dw $0, $0, $0, $0, $0, $0, $0, $0
 dw $0, $0, $0, $0, $0, $0, $0, $0
 // Additional Hi, Lo, etc
+interrupt_saved_registers_misc:
 dw $0, $0, $0, $0, $0, $0, $0, $0
 // Floating Point Registers
+interrupt_saved_registers_float:
 dl $0, $0, $0, $0, $0, $0, $0, $0
 dl $0, $0, $0, $0, $0, $0, $0, $0
 dl $0, $0, $0, $0, $0, $0, $0, $0
