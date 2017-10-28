@@ -33,6 +33,7 @@ Start:
 	nop // Marker NOP's 
 	
 	// SYSCALL Instruction
+	interrupt_set_syscall(syscall_mars)
 	//lui a0, r0
 	//ori a0, 10
 	//syscall
@@ -69,3 +70,4 @@ ExceptionHandler:
 include "../LIB/N64_SYS.S"
 include "../LIB/N64_INTERRUPT.S"
 include "../LIB/N64_INTERRUPT_HANDLER.S"
+include "../LIB/N64_SYSCALL_MARS.S"
