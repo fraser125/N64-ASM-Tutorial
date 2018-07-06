@@ -3,7 +3,9 @@ align(8)
 _interrupt_init:
 	la t0, _inthandler_overlay
 	li t1, exception_destination
-	addi t2, r0, 512
+	li t2, _interrupt_handler_length
+	addi t2, t2, 15
+	andi t2, t2, $FFF0
 _interrupt_init_loop:
 	lw t4, 0(t0)
 	lw t5, 4(t0)
@@ -73,6 +75,24 @@ interrupt_deactivate:
 	nop
 
 interrupt_timer_reset:
+	jr ra
+	nop
+
+_interrupt_mi_manage:
+	// Disable all Interrupts otherwise we might "trigger" one/all.
+	mfc0 t0, Status
+	addi t1, r0, -2
+	and t1, t1, t0
+	mtc0 t1, Status
+	// Get MI Interrupts
+	lui t1, MI_BASE
+	lw t1, MI_INTR_MASK(t1)	
+	// Set the MI master interrupt if any of the other Interrupts are set.
+	beq t1, r0, _exit	
+	ori t2, t0, 0x8000
+	// Restore Global Interrupt State
+	mtc0 t2, Status
+	 _exit:
 	jr ra
 	nop
 	
@@ -236,8 +256,13 @@ dw $0, $0, $0, $0, $0, $0, $0, $0
 dw $0, $0, $0, $0, $0, $0, $0, $0
 dw $0, $0, $0, $0, $0, $0, $0, $0
 dw $0, $0, $0, $0, $0, $0, $0, $0
-// Additional Hi, Lo, etc
+// Additional Hi, Lo, 
 interrupt_saved_registers_misc:
+dw $0, $0, $0, $0
+interrupt_saved_COP0_misc:
+dw $0, $0, $0, $0, $0, $0, $0, $0
+dw $0, $0, $0, $0, $0, $0, $0, $0
+dw $0, $0, $0, $0, $0, $0, $0, $0
 dw $0, $0, $0, $0, $0, $0, $0, $0
 // Floating Point Registers
 interrupt_saved_registers_float:

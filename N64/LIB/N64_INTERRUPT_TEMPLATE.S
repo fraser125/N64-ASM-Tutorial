@@ -8,6 +8,16 @@
 // jump through to the default:
 // Assumption: Trash k0, k1
 
+// libdragon notes:
+// Checks for Exceptions $0000 00FF
+// Checks for Reset Interrupt $0000 1000
+// Checks for Timer Interrupt $0000 8000
+// $0000 0400 RCP Assumed Type remaining MI has details
+// Software Interrupts are not checked
+
+// VR4300 Programming Guide notes:
+// 
+
 db "Inter. Block"
 align(8)
 _interrupt_handler_template:
@@ -83,33 +93,41 @@ _xtlb_handler:
 	j _tlb_handler
 	nop
 
-fixed_gap(ExceptionHandlers, 0x58)
+fixed_gap(ExceptionHandlers, 0x5C)
 exc23_WATCH_handler_ptr: // Watch
 static_value(DEBUG_SHOW_STATIC_VALUE, dw 0x0, db "WATH")
 	
 InterruptHandlers:
-int0_handler_ptr: // Software
+// Software
+int0_handler_ptr: 
 static_value(DEBUG_SHOW_STATIC_VALUE, dw 0x0, db "INT0")
 
-int1_handler_ptr: // Software 
+// Software 
+int1_handler_ptr: 
 static_value(DEBUG_SHOW_STATIC_VALUE, dw 0x0, db "INT1")
 
-int2_handler_ptr: // Ext: INT0 RCP
+// Ext: INT0 RCP
+int2_handler_ptr: 
 static_value(DEBUG_SHOW_STATIC_VALUE, dw 0x0, db "INT2")
 
-nt3_handler_ptr: // Ext: INT1 Pulled High in Schematic
+// Ext: INT1 Pulled High in Schematic
+nt3_handler_ptr: 
 static_value(DEBUG_SHOW_STATIC_VALUE, dw 0x0, db "INT3")
 
-int4_handler_ptr: // Ext: INT2 PIF
+// Ext: INT2 PIF
+int4_handler_ptr: 
 static_value(DEBUG_SHOW_STATIC_VALUE, dw 0x0, db "INT4")
 
-int5_handler_ptr: // Ext: INT3 Pulled High in Schematic
+// Ext: INT3 Pulled High in Schematic
+int5_handler_ptr: 
 static_value(DEBUG_SHOW_STATIC_VALUE, dw 0x0, db "INT5")
 
-int6_handler_ptr: // Ext: INT4 Pulled High in Schematic
+// Ext: INT4 Pulled High in Schematic
+int6_handler_ptr: 
 static_value(DEBUG_SHOW_STATIC_VALUE, dw 0x0, db "INT6")
 
-int7_handler_ptr: // Timer Interrupt
+// Timer Interrupt
+int7_handler_ptr: 
 static_value(DEBUG_SHOW_STATIC_VALUE, dw 0x0, db "INT7")
 
 tlb_handler_ptr:
@@ -130,10 +148,13 @@ static_value(DEBUG_SHOW_STATIC_VALUE, dw 0x0, db "IOTR")
 other_exc_handler_ptr:
 static_value(DEBUG_SHOW_STATIC_VALUE, dw 0x0, db "EOTR")
 	
+_intterupt_save_ra:
+static_value(DEBUG_SHOW_STATIC_VALUE, dw 0x0, db "ra  ")
+
 fixed_gap(_xtlb_handler, 0x80)
 
 _cache_handler:
-	la k0, cache_handler_ptr
+	la k0, cache_handler_ptr	
 	lw k0, 0(k0)
 	nop
 	beq k0, r0, _default_handler
@@ -145,47 +166,61 @@ _cache_handler:
 	nop
 fixed_gap(_cache_handler, 0x80)
 
+// libdragon notes:
+// Checks for Exceptions $0000 00FF
+// Checks for Reset Interrupt $0000 1000
+// Checks for Timer Interrupt $0000 8000
+// $0000 0400 RCP Assumed Type remaining MI has details
+// Software Interrupts are not checked
+
 _default_handler:
 	// Free up another register
-	la k1, interrupt_saved_registers
-	sw ra, ra*4(k1)
+	lui k1, $8000
+	sw ra, _intterupt_save_ra(k1)
 
 	mfc0 k0, SR // What we are watching for
-	mfc0 k1, Cause // What happened
-	and k0, k1, k0 // Happened & Watching = Action to take
 	// Very careful use of 'ra' register
+	mfc0 ra, Cause // What happened
+	and k0, ra, k0 // Happened & Watching = Action to take
 	andi ra, k0, $00FF
 	
 	// Process Interrupts first
 	// Shift Right 8 then multiply by 4 to get an address
 	srl k0, k0, 8
 	beq k0, r0, _exception_check // k0 before or after are fine for this branch
-	sll k0, k0, 2
+	sll k0, k0, 1
+		
 	la k1, InterruptHandlers	
-	j _interrupt_manage
+	j _interrupt_custom_execute
 	add k0, k0, k1	
 	
 _exception_check: 
 	blez ra, _interrupt_other_exception
 	la k0, ExceptionHandlers // Intentionally in Delay Slot, gets overwritten if wrong.
-	j _interrupt_manage
+	j _interrupt_custom_execute
 	add k0, k0, ra
 		
 _interrupt_other_exception:
 	// Other Exception	
 	la k0, default_handler_ptr
 	
-_interrupt_manage: // Test custom handler
+_interrupt_custom_execute: // Test custom handler
 	lw k0, 0(k0)
 	nop
 	beq k0, r0, _return_handler
 	nop
+_interrupt_custom_handler:
 	// Jump to custom handler
 	jalr k0
 	nop	
 	
-	//This is the default handler, so return
+	//This is the return handler
+	// Clean up and return
 _return_handler:
+	// Restore the 'ra' register
+	lui k1, $8000
+	lw ra, _intterupt_save_ra(k1)
+
 	mfc0 k0, EPC
 	addiu k0, k0, 4
 	mtc0 k0, EPC
