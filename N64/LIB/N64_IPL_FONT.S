@@ -22,94 +22,77 @@ variable ipl_font_end(t5)
 fontinit16:
 	la ipl_font, $B0000B70
 	addi ipl_font_end, ipl_font, 1168
-	li font_top_bit_mask, 0x8000'0000
+	li font_top_bit_mask, 0x80000000
 	
-font_next_word:
+font_next_word16:
 	lw font_cur_word, 0(ipl_font)
 	addi font_bit_count, zero, 31
 
-font_next_bits:
+font_next_bits16:
 	and font_bits, font_cur_word, font_top_bit_mask
 	sll font_cur_word, font_cur_word, 1
-	bnel font_bits, zero, font_forecolor
+	bnel font_bits, zero, font_forecolor16
 	nop
 	sh backcolor, 0(destination)
-	j font_continue
+	j font_continue16
 	nop
-font_forecolor:
+font_forecolor16:
 	sh forecolor, 0(destination)	
 	nop
-font_continue:
+font_continue16:
 	addi destination, destination, 2
-	bne font_bit_count, zero, font_next_bits
+	bne font_bit_count, zero, font_next_bits16
 	addi font_bit_count, font_bit_count, -1
 	
-	bne ipl_font, ipl_font_end, font_next_word
+	bne ipl_font, ipl_font_end, font_next_word16
 	addi ipl_font, ipl_font, 4
 	jr ra
-	nop
-	nop
-	nop
-
-	nop
+	addiu v0, zero, 18768
 	nop
 	nop
 
-align(8)
-// https://stackoverflow.com/questions/5558492/divide-by-10-using-bit-shifts
-divide10:
-variable n(a0)
-variable q(v0)
-variable r(t0)
-variable t(t1)
-	srl q, n, 1
-	srl r, n, 2
-	add q, q, r
-	srl r, q, 4
-	add q, q, r
-	srl r, q, 8
-	add q, q, r
-	srl r, q, 16
-	add q, q, r
-	srl q, q, 3	
-	sll t, q, 2
-	add t, t, q
-	sll t, t, 1
-	sub r, n, t
-	addi t, zero, 10 
-	slt t, t, r
+	nop
+	nop
+fontinit32:
+	la ipl_font, $B0000B70
+	addi ipl_font_end, ipl_font, 1168
+	li font_top_bit_mask, 0x80000000
+	
+font_next_word32:
+	lw font_cur_word, 0(ipl_font)
+	addi font_bit_count, zero, 31
+
+font_next_bits32:
+	and font_bits, font_cur_word, font_top_bit_mask
+	sll font_cur_word, font_cur_word, 1
+	bnel font_bits, zero, font_forecolor32
+	nop
+	sh backcolor, 0(destination)
+	j font_continue32
+	nop
+font_forecolor32:
+	sh forecolor, 0(destination)	
+	nop
+font_continue32:
+	addi destination, destination, 4
+	bne font_bit_count, zero, font_next_bits32
+	addi font_bit_count, font_bit_count, -1
+	
+	bne ipl_font, ipl_font_end, font_next_word32
+	addi ipl_font, ipl_font, 4
 	jr ra
-	add q, q, t
-
-	nop
-	nop
-	nop
-	nop
+	addiu v0, zero, 37536
 	nop
 	nop
 
+	nop
+	nop
+	nop
 align(8)	
-fontconvhex2dec:
-variable text_hex_address(a0)
-variable text_hex_length(a1)
-variable text_dec_address(a2)
-variable text_dec_length(a3)
-	// based on length load the value into a register (upto 64-bit values supported)
-	// only populated the provided decimal length starting from the right LSB
-	//jal divide10
-	//addi a0, zero, -1
-	// v0 = 0x19999999
-
-	jr ra
 	nop
 	nop
 	nop
-
-align(8)	
 fontprintline16:
-	nop
-	nop
-	nop
 // Constant Values
 constant font_addr(a0)
 constant fb_addr(a1)
@@ -198,6 +181,57 @@ font_space:
 	bnel text_length, zero, font_next_char
 	addi text_length, text_length, -1
 font_finished:
+	jr ra
+	nop
+	nop
+	nop
+
+
+align(8)
+// https://stackoverflow.com/questions/5558492/divide-by-10-using-bit-shifts
+divide10:
+variable n(a0)
+variable q(v0)
+variable r(t0)
+variable t(t1)
+	srl q, n, 1
+	srl r, n, 2
+	add q, q, r
+	srl r, q, 4
+	add q, q, r
+	srl r, q, 8
+	add q, q, r
+	srl r, q, 16
+	add q, q, r
+	srl q, q, 3	
+	sll t, q, 2
+	add t, t, q
+	sll t, t, 1
+	sub r, n, t
+	addi t, zero, 10 
+	slt t, t, r
+	jr ra
+	add q, q, t
+
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+
+align(8)	
+fontconvhex2dec:
+variable text_hex_address(a0)
+variable text_hex_length(a1)
+variable text_dec_address(a2)
+variable text_dec_length(a3)
+	// based on length load the value into a register (upto 64-bit values supported)
+	// only populated the provided decimal length starting from the right LSB
+	//jal divide10
+	//addi a0, zero, -1
+	// v0 = 0x19999999
+
 	jr ra
 	nop
 	nop

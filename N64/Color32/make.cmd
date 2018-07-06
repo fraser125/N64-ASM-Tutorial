@@ -1,7 +1,7 @@
 @ECHO OFF
-set rom_name=Color16_Test.N64
+set rom_name=Color32_Test.N64
 REM Space seperated list of source files
-set source_files=Color16_Test.asm
+set source_files=Color32_Test.asm
 
 if exist %rom_name% (
 	del /q %rom_name%
